@@ -1,0 +1,42 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Arquivos de byte-code Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuição/Packaging
+dist/
+build/
+*.egg-info/
+
+# Arquivos de teste
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Arquivos de IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.*.local
+
+# Arquivos de log
+*.log
+logs/
+
+# Arquivos de relatório gerados pelo scanner
+scan_report_*.txt
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
