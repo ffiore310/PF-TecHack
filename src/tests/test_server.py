@@ -41,7 +41,7 @@ def index():
 
 @app.route('/login', methods=['POST'])
 def login():
-    # Vulnerável a SQL Injection
+    # Vulnerável a SQL Injection e Authentication Failures
     username = request.form.get('username', '')
     password = request.form.get('password', '')
     
@@ -49,7 +49,24 @@ def login():
     if "'" in username or "'" in password:
         return "Error: MySQL Error 1064: SQL syntax error"
     
+    # Vulnerável: expõe informação sobre senha em mensagem de erro
+    if not password:
+        return "Error: Password cannot be empty"
+    
+    # Não implementa rate limiting
     return f"Login attempt with username: {username}"
+
+@app.route('/register', methods=['POST'])
+def register():
+    # Vulnerável: aceita senhas fracas
+    username = request.form.get('username', '')
+    password = request.form.get('password', '')
+    
+    if not username or not password:
+        return "Username and password are required"
+    
+    # Aceita qualquer senha (vulnerável)
+    return "User registered successfully"
 
 if __name__ == '__main__':
     print("Starting vulnerable test server on http://localhost:5000")

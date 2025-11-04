@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Security Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Web Security Scanner</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="tab-content mt-3" id="scanTabsContent">
+            <!-- Single Scan Tab -->
+            <div class="tab-pane fade show active" id="single" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Novo Scan</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="scanForm">
+                                    <div class="mb-3">
+                                        <label for="url" class="form-label">URL Alvo</label>
+                                        <input type="url" class="form-control" id="url" required
+                                               placeholder="https://exemplo.com">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Tipos de Scan</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="all" 
+                                                   id="scanAll" checked>
+                                            <label class="form-check-label" for="scanAll">
+                                                Todos
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input scan-type" type="checkbox" 
+                                                   value="xss" id="scanXss">
+                                            <label class="form-check-label" for="scanXss">
+                                                Cross-Site Scripting (XSS)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input scan-type" type="checkbox" 
+                                                   value="sqli" id="scanSqli">
+                                            <label class="form-check-label" for="scanSqli">
+                                                SQL Injection
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input scan-type" type="checkbox" 
+                                                   value="auth" id="scanAuth">
+                                            <label class="form-check-label" for="scanAuth">
+                                                Falhas de Autenticação
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input scan-type" type="checkbox" 
+                                                   value="crypto" id="scanCrypto">
+                                            <label class="form-check-label" for="scanCrypto">
+                                                Falhas Criptográficas
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="reportFormat" class="form-label">Formato do Relatório</label>
+                                        <select class="form-select" id="reportFormat">
+                                            <option value="json">JSON</option>
+                                            <option value="markdown">Markdown</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="startScan">
+                                        <i class="bi bi-play-fill"></i> Iniciar Scan
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Resultados do Scan</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="scanStatus" class="alert alert-info d-none">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    Scan em andamento...
+                                </div>
+                                <div id="scanResults">
+                                    <p class="text-muted">Os resultados aparecerão aqui após o scan...</p>
+                                </div>
+                                <div id="downloadSection" class="d-none mt-3">
+                                    <button id="downloadBtn" class="btn btn-success">
+                                        <i class="bi bi-download"></i> Baixar Relatório
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variáveis globais para armazenar o relatório
+        let currentReportBlob = null;
+        let currentReportFilename = '';
+        
+        // Atualiza checkboxes de tipo de scan
+        $('#scanAll').change(function() {
+            $('.scan-type').prop('checked', false).prop('disabled', $(this).is(':checked'));
+        });
+
+        $('.scan-type').change(function() {
+            if ($(this).is(':checked')) {
+                $('#scanAll').prop('checked', false);
+            }
+        });
+
+        // Form de scan individual
+        $('#scanForm').on('submit', async function(e) {
+            e.preventDefault();
+            
+            // Mostra status e esconde botão de download
+            $('#scanStatus').removeClass('d-none');
+            $('#scanResults').html('<p class="text-muted"><em>Executando scan...</em></p>');
+            $('#downloadSection').addClass('d-none');
+            
+            // Prepara dados
+            let types = $('#scanAll').is(':checked') ? 'all' : 
+                       $('.scan-type:checked').map(function() {
+                           return $(this).val();
+                       }).get().join(',');
+            
+            const reportFormat = $('#reportFormat').val();
+            
+            // Cria form data
+            let formData = new FormData();
+            formData.append('url', $('#url').val());
+            formData.append('type', types);
+            formData.append('format', reportFormat);
+            
+            try {
+                // Faz requisição usando fetch API
+                const response = await fetch('/scan', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+                
+                // Se for erro (JSON)
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    $('#scanStatus').addClass('d-none');
+                    $('#scanResults').html(`
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle"></i> <strong>Erro:</strong> ${errorData.message}
+                        </div>
+                    `);
+                    return;
+                }
+                
+                // Se for sucesso, processa o conteúdo
+                const blob = await response.blob();
+                const disposition = response.headers.get('content-disposition');
+                let filename = 'scan_report.json';
+                
+                if (disposition && disposition.includes('filename=')) {
+                    filename = disposition.split('filename=')[1].replace(/['"]/g, '');
+                }
+                
+                console.log('Filename:', filename);
+                console.log('Blob size:', blob.size);
+                
+                // Armazena o blob para download posterior
+                currentReportBlob = blob;
+                currentReportFilename = filename;
+                
+                // Lê o conteúdo do blob para exibir
+                const text = await blob.text();
+                
+                // Função para escapar HTML
+                function escapeHtml(unsafe) {
+                    return unsafe
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+                
+                // Formata e exibe o conteúdo baseado no formato
+                let displayContent = '';
+                if (reportFormat === 'json') {
+                    try {
+                        const jsonData = JSON.parse(text);
+                        const escapedJson = escapeHtml(JSON.stringify(jsonData, null, 2));
+                        displayContent = `
+                            <div class="alert alert-success mb-3">
+                                <i class="bi bi-check-circle"></i> <strong>Scan concluído com sucesso!</strong>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Resumo:</strong>
+                                <ul>
+                                    <li>URL: ${escapeHtml(jsonData.scan_info.target_url)}</li>
+                                    <li>Total de vulnerabilidades: ${jsonData.vulnerabilities.length}</li>
+                                    <li>Tempo de scan: ${jsonData.scan_info.scan_time.toFixed(2)}s</li>
+                                </ul>
+                            </div>
+                            <pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">${escapedJson}</pre>
+                        `;
+                    } catch (e) {
+                        const escapedText = escapeHtml(text);
+                        displayContent = `<pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto;">${escapedText}</pre>`;
+                    }
+                } else {
+                    // Markdown - escapa o HTML para evitar execução de scripts
+                    const escapedText = escapeHtml(text);
+                    displayContent = `
+                        <div class="alert alert-success mb-3">
+                            <i class="bi bi-check-circle"></i> <strong>Scan concluído com sucesso!</strong>
+                        </div>
+                        <pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap;">${escapedText}</pre>
+                    `;
+                }
+                
+                // Atualiza a interface
+                $('#scanStatus').addClass('d-none');
+                $('#scanResults').html(displayContent);
+                $('#downloadSection').removeClass('d-none');
+                
+                console.log('Conteúdo exibido com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro durante o scan:', error);
+                $('#scanStatus').addClass('d-none');
+                $('#scanResults').html(`
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle"></i> <strong>Erro ao executar o scan:</strong> ${error.message}
+                    </div>
+                `);
+            }
+        });
+        
+        // Botão de download
+        $('#downloadBtn').on('click', function() {
+            if (currentReportBlob && currentReportFilename) {
+                const url = window.URL.createObjectURL(currentReportBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = currentReportFilename;
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(link);
+                }, 100);
+                
+                console.log('Download iniciado:', currentReportFilename);
+            }
+        });
+
+    </script>
+</body>
+</html>

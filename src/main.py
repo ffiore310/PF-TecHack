@@ -20,7 +20,7 @@ def print_banner():
     banner = f"""
 {Fore.CYAN}Web Application Security Scanner{Style.RESET_ALL}
 {Fore.BLUE}================================{Style.RESET_ALL}
-Versão: 1.0.0 (Conceito C)
+Versão: 1.0.0 (Conceito B)
 Desenvolvido por: Fernando Fiore
 """
     print(banner)

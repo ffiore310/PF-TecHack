@@ -1,0 +1,79 @@
+# Configuração do Web Security Scanner
+
+# Configurações gerais
+general:
+  output_dir: "./reports"  # Diretório para salvar relatórios
+  log_level: "info"       # Nível de log (debug, info, warning, error)
+  max_threads: 4          # Máximo de threads para scans paralelos
+
+# Configurações do scanner
+scanner:
+  timeout: 30             # Timeout para requisições em segundos
+  user_agent: "WebSecurityScanner/1.0"
+  max_depth: 3            # Profundidade máxima para crawling
+  exclude_paths:          # Paths para ignorar
+    - "/logout"
+    - "/admin"
+    - "*.jpg"
+    - "*.png"
+
+# Configurações de autenticação
+auth:
+  enabled: false          # Se deve usar autenticação
+  method: "form"         # Método de autenticação (form, basic, bearer)
+  credentials:
+    username: ""
+    password: ""
+  token: ""              # Token para autenticação bearer
+
+# Configurações do servidor web
+web:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  ssl:
+    enabled: false
+    cert: ""
+    key: ""
+
+# Configurações de scans agendados
+scheduled_scans:
+  - name: "Scan Diário"
+    url: "http://exemplo.com"
+    time: "00:00"
+    types:
+      - all
+    format: "json"
+    notify: true
+
+  - name: "Scan Semanal"
+    url: "http://teste.com"
+    time: "12:00"
+    types:
+      - xss
+      - sqli
+    format: "markdown"
+    notify: true
+
+# Configurações de notificação
+notifications:
+  email:
+    enabled: false
+    smtp_server: ""
+    smtp_port: 587
+    username: ""
+    password: ""
+    from: ""
+    to: []
+
+  slack:
+    enabled: false
+    webhook_url: ""
+    channel: "#security-alerts"
+
+# Configurações de proxy
+proxy:
+  enabled: false
+  http: ""
+  https: ""
+  no_proxy: []

@@ -5,63 +5,146 @@ Scanner module for detecting web application vulnerabilities.
 """
 
 import time
+from typing import List, Dict, Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 from utils.http_utils import validate_url, make_request
 from utils.payloads import XSS_PAYLOADS, SQLI_PAYLOADS, SQL_ERROR_PATTERNS
+from utils.diagnostics import ScannerDiagnostics
+from scanners.crypto_scanner import CryptoScanner
+from scanners.auth_scanner import AuthScanner
 
 class Scanner:
     def __init__(self):
         self.vulnerabilities = []
+        self.crypto_scanner = CryptoScanner()
+        self.auth_scanner = AuthScanner()
+        self.diagnostics = ScannerDiagnostics()
         
-    def scan(self, url, scan_types='all', scan_mode='normal'):
+    def scan(self, url: str, scan_types: List[str] = None, scan_mode: str = 'fast') -> dict:
         """
-        Executa o scan de segurança na URL fornecida.
+        Executa o scan de vulnerabilidades no alvo especificado.
         
         Args:
-            url (str): URL alvo para scan
-            scan_types (str/set): Tipos de scan a executar ('all', 'xss', 'sqli')
-            scan_mode (str): Modo de execução ('normal', 'quiet')
+            url: URL do alvo a ser escaneado
+            scan_types: Lista de tipos de scan a serem executados (xss, sqli, etc)
+            scan_mode: Modo de scan (fast ou deep)
             
         Returns:
-            dict: Resultados do scan
+            Dicionário com os resultados do scan
         """
-        if not validate_url(url):
+        
+        if not scan_types:
+            scan_types = ['all']
+            
+        vulnerabilities = []
+        scan_id = self.diagnostics.start_scan(url, scan_types)
+        start_time = time.time()
+        success = True
+        
+        try:
+            # Valida URL
+            if not url.startswith(('http://', 'https://')):
+                raise ValueError('URL inválida. Use http:// ou https://')
+            
+            # Executa os scans conforme configuração
+            if 'all' in scan_types or 'xss' in scan_types:
+                module_start = time.time()
+                try:
+                    xss_vulns = self._scan_xss(url)
+                    if xss_vulns:
+                        vulnerabilities.extend(xss_vulns)
+                    self.diagnostics.log_module_result(
+                        scan_id, 'xss', True, time.time() - module_start
+                    )
+                except Exception as e:
+                    self.diagnostics.log_module_result(
+                        scan_id, 'xss', False, time.time() - module_start, str(e)
+                    )
+                    success = False
+            
+            if 'all' in scan_types or 'sqli' in scan_types:
+                module_start = time.time()
+                try:
+                    sqli_vulns = self._scan_sqli(url)
+                    if sqli_vulns:
+                        vulnerabilities.extend(sqli_vulns)
+                    self.diagnostics.log_module_result(
+                        scan_id, 'sqli', True, time.time() - module_start
+                    )
+                except Exception as e:
+                    self.diagnostics.log_module_result(
+                        scan_id, 'sqli', False, time.time() - module_start, str(e)
+                    )
+                    success = False
+            
+            if 'all' in scan_types or 'crypto' in scan_types:
+                module_start = time.time()
+                try:
+                    crypto_vulns = self.crypto_scanner.scan(url)
+                    if crypto_vulns:
+                        if isinstance(crypto_vulns, list):
+                            vulnerabilities.extend(crypto_vulns)
+                        else:
+                            vulnerabilities.append(crypto_vulns)
+                    self.diagnostics.log_module_result(
+                        scan_id, 'crypto', True, time.time() - module_start
+                    )
+                except Exception as e:
+                    self.diagnostics.log_module_result(
+                        scan_id, 'crypto', False, time.time() - module_start, str(e)
+                    )
+                    success = False
+            
+            if 'all' in scan_types or 'auth' in scan_types:
+                module_start = time.time()
+                try:
+                    auth_vulns = self.auth_scanner.scan(url)
+                    if auth_vulns:
+                        vulnerabilities.extend(auth_vulns)
+                    self.diagnostics.log_module_result(
+                        scan_id, 'auth', True, time.time() - module_start
+                    )
+                except Exception as e:
+                    self.diagnostics.log_module_result(
+                        scan_id, 'auth', False, time.time() - module_start, str(e)
+                    )
+                    success = False
+            
+            end_time = time.time()
+            scan_duration = end_time - start_time
+            
+            # Finaliza diagnóstico
+            stats = self.diagnostics.finish_scan(scan_id, success, len(vulnerabilities))
+            
+            # Analisa performance
+            performance = self.diagnostics.analyze_performance(stats)
+            
             return {
                 'url': url,
-                'error': 'URL inválida',
-                'vulnerabilities': [],
-                'scan_time': None,
+                'vulnerabilities': vulnerabilities,
+                'scan_time': scan_duration,
                 'scan_types': scan_types,
-                'scan_mode': scan_mode
+                'scan_mode': scan_mode,
+                'total_vulns': len(vulnerabilities),
+                'performance': performance,
+                'success': success
             }
-        
-        start_time = time.time()
-        
-        # Lista para armazenar vulnerabilidades encontradas
-        vulnerabilities = []
-        
-        # Converte scan_types para set se for string
-        if isinstance(scan_types, str):
-            scan_types = {scan_types}
-        
-        # Executa os scans conforme configuração
-        if 'all' in scan_types or 'xss' in scan_types:
-            xss_vulns = self._scan_xss(url)
-            vulnerabilities.extend(xss_vulns)
             
-        if 'all' in scan_types or 'sqli' in scan_types:
-            sqli_vulns = self._scan_sqli(url)
-            vulnerabilities.extend(sqli_vulns)
-        
-        end_time = time.time()
-        
-        return {
-            'url': url,
-            'vulnerabilities': vulnerabilities,
-            'scan_time': end_time - start_time,
-            'scan_types': scan_types,
-            'scan_mode': scan_mode
-        }
+        except Exception as e:
+            end_time = time.time()
+            # Finaliza diagnóstico com erro
+            self.diagnostics.finish_scan(scan_id, False, 0)
+            
+            return {
+                'url': url,
+                'error': str(e),
+                'vulnerabilities': [],
+                'scan_time': end_time - start_time,
+                'scan_types': scan_types,
+                'scan_mode': scan_mode,
+                'total_vulns': 0,
+                'success': False
+            }
     
     def _get_injectable_urls(self, url):
         """
@@ -123,11 +206,12 @@ class Scanner:
             if response and payload in response.text:
                 vulnerabilities.append({
                     'type': 'XSS',
+                    'subtype': 'Reflected XSS',
                     'url': test_url,
-                    'method': 'GET',
-                    'payload': payload,
-                    'param': 'message',
-                    'severity': 'High'
+                    'severity': 'High',
+                    'description': f'Possível XSS refletido detectado via parâmetro GET "message"',
+                    'evidence': f'URL: {test_url}\nPayload: {payload}',
+                    'recommendation': 'Sanitize todos os inputs e aplique encoding apropriado no output'
                 })
         
         # Teste via POST parameter
@@ -136,11 +220,12 @@ class Scanner:
             if response and payload in response.text:
                 vulnerabilities.append({
                     'type': 'XSS',
+                    'subtype': 'Stored XSS',
                     'url': url,
-                    'method': 'POST',
-                    'payload': payload,
-                    'param': 'message',
-                    'severity': 'High'
+                    'severity': 'High',
+                    'description': f'Possível XSS armazenado detectado via POST em "message"',
+                    'evidence': f'URL: {url}\nPayload: {payload}\nMétodo: POST',
+                    'recommendation': 'Sanitize todos os inputs e aplique encoding apropriado no output'
                 })
         
         return vulnerabilities
@@ -172,12 +257,12 @@ class Scanner:
                     if pattern in response.text:
                         vulnerabilities.append({
                             'type': 'SQL Injection',
+                            'subtype': 'Error-based SQLi',
                             'url': login_url,
-                            'method': 'POST',
-                            'payload': payload,
-                            'param': 'username',
-                            'pattern_matched': pattern,
-                            'severity': 'High'
+                            'severity': 'High',
+                            'description': f'SQL Injection detectada no campo username do formulário de login',
+                            'evidence': f'URL: {login_url}\nPayload: {payload}\nErro SQL encontrado: {pattern}',
+                            'recommendation': 'Use prepared statements ou ORM e implemente validação adequada de input'
                         })
                         break
             
@@ -193,12 +278,12 @@ class Scanner:
                     if pattern in response.text:
                         vulnerabilities.append({
                             'type': 'SQL Injection',
+                            'subtype': 'Error-based SQLi',
                             'url': login_url,
-                            'method': 'POST',
-                            'payload': payload,
-                            'param': 'password',
-                            'pattern_matched': pattern,
-                            'severity': 'High'
+                            'severity': 'High',
+                            'description': f'SQL Injection detectada no campo password do formulário de login',
+                            'evidence': f'URL: {login_url}\nPayload: {payload}\nErro SQL encontrado: {pattern}',
+                            'recommendation': 'Use prepared statements ou ORM e implemente validação adequada de input'
                         })
                         break
         

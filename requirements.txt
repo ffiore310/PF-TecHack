@@ -3,3 +3,7 @@ argparse==1.4.0
 pytest==7.4.3
 python-dotenv==1.0.0
 colorama==0.4.6  # Para output colorido no terminal
+flask==2.0.1     # Para interface web
+PyYAML>=6.0.1    # Para arquivos de configuração (versão mais estável)
+schedule==1.1.0  # Para agendamento de scans
+Werkzeug==2.0.1  # Dependência do Flask
