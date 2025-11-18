@@ -3,7 +3,12 @@ argparse==1.4.0
 pytest==7.4.3
 python-dotenv==1.0.0
 colorama==0.4.6  # Para output colorido no terminal
-flask==2.0.1     # Para interface web
+flask==3.0.0     # Para interface web (atualizado)
 PyYAML>=6.0.1    # Para arquivos de configuração (versão mais estável)
 schedule==1.1.0  # Para agendamento de scans
-Werkzeug==2.0.1  # Dependência do Flask
+Werkzeug==3.0.0  # Dependência do Flask (atualizado)
+flask-login==0.6.3  # Sistema de autenticação (atualizado)
+flask-sqlalchemy==3.1.1  # ORM para banco de dados (atualizado)
+SQLAlchemy==2.0.23  # Banco de dados (versão compatível)
+flask-wtf==1.2.1  # Formulários com proteção CSRF (atualizado)
+email-validator==2.1.0  # Validação de emails (atualizado)

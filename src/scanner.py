@@ -12,6 +12,9 @@ from utils.payloads import XSS_PAYLOADS, SQLI_PAYLOADS, SQL_ERROR_PATTERNS
 from utils.diagnostics import ScannerDiagnostics
 from scanners.crypto_scanner import CryptoScanner
 from scanners.auth_scanner import AuthScanner
+from analysis.risk_scorer import RiskScorer
+from analysis.heuristic_analyzer import HeuristicAnalyzer
+from analysis.recommendation_engine import RecommendationEngine
 
 class Scanner:
     def __init__(self):
@@ -19,6 +22,9 @@ class Scanner:
         self.crypto_scanner = CryptoScanner()
         self.auth_scanner = AuthScanner()
         self.diagnostics = ScannerDiagnostics()
+        self.risk_scorer = RiskScorer()
+        self.heuristic_analyzer = HeuristicAnalyzer()
+        self.recommendation_engine = RecommendationEngine()
         
     def scan(self, url: str, scan_types: List[str] = None, scan_mode: str = 'fast') -> dict:
         """
@@ -119,15 +125,40 @@ class Scanner:
             # Analisa performance
             performance = self.diagnostics.analyze_performance(stats)
             
+            # === FASE 1: ANÁLISE HEURÍSTICA E PRIORIZAÇÃO ===
+            
+            # 1. Calcula scores de risco para todas as vulnerabilidades
+            scored_vulnerabilities = self.risk_scorer.score_vulnerabilities(vulnerabilities)
+            
+            # 2. Gera resumo de risco
+            risk_summary = self.risk_scorer.get_risk_summary(scored_vulnerabilities)
+            
+            # 3. Análise heurística
+            heuristic_insights = self.heuristic_analyzer.generate_heuristic_insights(scored_vulnerabilities)
+            
+            # 4. Correlação de vulnerabilidades
+            correlation_analysis = self.heuristic_analyzer.correlate_vulnerabilities(scored_vulnerabilities)
+            
+            # 5. Plano de remediação
+            remediation_plan = self.recommendation_engine.generate_remediation_plan(scored_vulnerabilities)
+            
+            # 6. Prioriza vulnerabilidades
+            prioritized_vulnerabilities = self.recommendation_engine.prioritize_vulnerabilities(scored_vulnerabilities)
+            
             return {
                 'url': url,
-                'vulnerabilities': vulnerabilities,
+                'vulnerabilities': prioritized_vulnerabilities,
                 'scan_time': scan_duration,
                 'scan_types': scan_types,
                 'scan_mode': scan_mode,
                 'total_vulns': len(vulnerabilities),
                 'performance': performance,
-                'success': success
+                'success': success,
+                # Análise avançada (FASE 1)
+                'risk_summary': risk_summary,
+                'heuristic_insights': heuristic_insights,
+                'correlation_analysis': correlation_analysis,
+                'remediation_plan': remediation_plan
             }
             
         except Exception as e:

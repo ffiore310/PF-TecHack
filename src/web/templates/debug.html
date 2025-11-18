@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Debug</title>
+</head>
+<body>
+    <h1>Teste de Logs</h1>
+    <p>Abra o Console do navegador (F12) e recarregue esta página</p>
+    <p>Depois volte para http://localhost:5001 e faça um scan</p>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        console.log('=== TESTE DE DEBUG ===');
+        console.log('1. jQuery carregou?', typeof $ !== 'undefined' ? 'SIM' : 'NÃO');
+        console.log('2. jQuery versão:', $.fn.jquery);
+        
+        $(document).ready(function() {
+            console.log('3. DOM está pronto!');
+        });
+        
+        console.log('=== AGORA VOLTE PARA localhost:5001 ===');
+        console.log('Abra o Console lá e veja se aparecem os mesmos logs');
+    </script>
+</body>
+</html>

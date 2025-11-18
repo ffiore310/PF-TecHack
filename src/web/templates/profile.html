@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Cabeçalho -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-person-circle"></i> Meu Perfil</h2>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </a>
+            </div>
+
+            <!-- Card de Informações -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações Pessoais</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="30%"><i class="bi bi-person"></i> Nome:</th>
+                            <td>{{ current_user.name }}</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-envelope"></i> Email:</th>
+                            <td>{{ current_user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-building"></i> Empresa:</th>
+                            <td>
+                                {% if current_user.company %}
+                                    {{ current_user.company }}
+                                {% else %}
+                                    <span class="text-muted">Não informado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-calendar-check"></i> Membro desde:</th>
+                            <td>{{ current_user.created_at.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        {% if current_user.last_login %}
+                        <tr>
+                            <th><i class="bi bi-clock-history"></i> Último acesso:</th>
+                            <td>{{ current_user.last_login.strftime('%d/%m/%Y às %H:%M') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Estatísticas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3">
+                                <h3 class="text-primary mb-0">{{ current_user.scans.count() }}</h3>
+                                <small class="text-muted">Total de Scans</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border-start">
+                                <h3 class="text-success mb-0">
+                                    {{ current_user.scans.filter_by(status='completed').count() }}
+                                </h3>
+                                <small class="text-muted">Concluídos</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border-start">
+                                <h3 class="text-warning mb-0">
+                                    {{ current_user.scans.filter_by(status='running').count() }}
+                                </h3>
+                                <small class="text-muted">Em Andamento</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Ações</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Editar Informações
+                        </a>
+                        <a href="{{ url_for('change_password') }}" class="btn btn-warning">
+                            <i class="bi bi-key"></i> Alterar Senha
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

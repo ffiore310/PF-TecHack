@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes do Scan - {{ scan.url }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="bi bi-shield-check"></i> Detalhes do Scan</h2>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-link-45deg"></i> {{ scan.url }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary mb-0">{{ scan.total_vulnerabilities }}</h3>
+                    <small class="text-muted">Total de Vulnerabilidades</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger mb-0">{{ scan.critical_count }}</h3>
+                    <small class="text-muted">Críticas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning mb-0">{{ scan.high_count }}</h3>
+                    <small class="text-muted">Altas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="
+                        {% if scan.risk_level == 'CRITICAL' %}text-danger
+                        {% elif scan.risk_level == 'HIGH' %}text-warning
+                        {% elif scan.risk_level == 'MEDIUM' %}text-info
+                        {% else %}text-success{% endif %}
+                    ">{{ scan.risk_score|round(1) }}</h3>
+                    <small class="text-muted">Score de Risco</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Scan -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <th width="40%">Status:</th>
+                            <td>
+                                {% if scan.status == 'completed' %}
+                                    <span class="badge bg-success">Concluído</span>
+                                {% elif scan.status == 'running' %}
+                                    <span class="badge bg-primary">Em andamento</span>
+                                {% elif scan.status == 'failed' %}
+                                    <span class="badge bg-danger">Falhou</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pendente</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Tipo:</th>
+                            <td>{{ scan.scan_type }}</td>
+                        </tr>
+                        <tr>
+                            <th>Iniciado em:</th>
+                            <td>{{ scan.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                        </tr>
+                        {% if scan.completed_at %}
+                        <tr>
+                            <th>Concluído em:</th>
+                            <td>{{ scan.completed_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-download"></i> Ações</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('download_scan_report', scan_id=scan.id, format='html') }}" 
+                           class="btn btn-success">
+                            <i class="bi bi-file-earmark-text"></i> Baixar Relatório HTML (Recomendado)
+                        </a>
+                        <a href="{{ url_for('download_scan_report', scan_id=scan.id, format='json') }}" 
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-code"></i> Baixar JSON
+                        </a>
+                        <a href="{{ url_for('download_scan_report', scan_id=scan.id, format='markdown') }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-file-earmark-richtext"></i> Baixar Markdown
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vulnerabilidades Encontradas -->
+    {% if scan.results and scan.results.vulnerabilities %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bug"></i> Vulnerabilidades Encontradas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Severidade</th>
+                                    <th>URL</th>
+                                    <th>Parâmetro</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vuln in scan.results.vulnerabilities %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-dark">{{ vuln.type }}</span>
+                                    </td>
+                                    <td>
+                                        {% if vuln.severity|upper == 'CRITICAL' %}
+                                            <span class="badge bg-danger">Crítica</span>
+                                        {% elif vuln.severity|upper == 'HIGH' %}
+                                            <span class="badge bg-warning text-dark">Alta</span>
+                                        {% elif vuln.severity|upper == 'MEDIUM' %}
+                                            <span class="badge bg-info">Média</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Baixa</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-break">{{ vuln.url }}</small>
+                                    </td>
+                                    <td>
+                                        {% if vuln.parameter %}
+                                            <code>{{ vuln.parameter }}</code>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ vuln.description[:100] }}{% if vuln.description|length > 100 %}...{% endif %}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                {% if scan.status == 'completed' %}
+                    Nenhuma vulnerabilidade foi encontrada neste scan. 🎉
+                {% else %}
+                    O scan ainda está em andamento ou não possui resultados disponíveis.
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recomendações (se disponível) -->
+    {% if scan.results and scan.results.recommendations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Recomendações de Segurança</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for rec in scan.results.recommendations %}
+                        <li class="list-group-item">
+                            <strong>{{ rec.title }}</strong>
+                            <p class="mb-0 text-muted">{{ rec.description }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

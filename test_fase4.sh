@@ -1,0 +1,42 @@
+#!/bin/bash
+
+echo "🚀 Teste Rápido - Fase 4"
+echo "======================="
+echo ""
+
+cd /home/ffiore310/Documents/TecHack/PF/PF-TecHack
+
+echo "✅ Passo 1: Verificando dependências..."
+pip list | grep -E "flask-login|flask-sqlalchemy|flask-wtf|email-validator" && echo "✅ Dependências OK" || echo "❌ Instale as dependências: pip install flask-login flask-sqlalchemy flask-wtf email-validator"
+
+echo ""
+echo "✅ Passo 2: Verificando arquivos criados..."
+[ -f "src/web/models.py" ] && echo "✅ models.py criado" || echo "❌ models.py não encontrado"
+[ -f "src/web/forms.py" ] && echo "✅ forms.py criado" || echo "❌ forms.py não encontrado"
+[ -f "src/web/app_auth.py" ] && echo "✅ app_auth.py criado" || echo "❌ app_auth.py não encontrado"
+[ -f "src/web/templates/base.html" ] && echo "✅ base.html criado" || echo "❌ base.html não encontrado"
+[ -f "src/web/templates/login.html" ] && echo "✅ login.html criado" || echo "❌ login.html não encontrado"
+[ -f "src/web/templates/register.html" ] && echo "✅ register.html criado" || echo "❌ register.html não encontrado"
+[ -f "src/web/templates/dashboard.html" ] && echo "✅ dashboard.html criado" || echo "❌ dashboard.html não encontrado"
+[ -f "src/web/templates/new_scan.html" ] && echo "✅ new_scan.html criado" || echo "❌ new_scan.html não encontrado"
+
+echo ""
+echo "🎉 Verificação concluída!"
+echo ""
+echo "📝 Próximos passos:"
+echo "1. Instalar dependências (se não instaladas):"
+echo "   pip install flask-login flask-sqlalchemy flask-wtf email-validator"
+echo ""
+echo "2. Iniciar servidor de teste (Terminal 1):"
+echo "   python3 src/test_server.py"
+echo ""
+echo "3. Iniciar aplicação web (Terminal 2):"
+echo "   python3 src/web/app_auth.py"
+echo ""
+echo "4. Abrir navegador em:"
+echo "   http://localhost:5001"
+echo ""
+echo "5. Login com:"
+echo "   Email: admin@scanner.local"
+echo "   Senha: admin123"
+echo ""
