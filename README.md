@@ -219,7 +219,7 @@ Este projeto foi desenvolvido para fins educacionais como parte da avaliação f
 
 ## Autor
 
-Felipe Fiore (@ffiore310)
+Fernando Fiore (@ffiore310)
 
 ## Aviso Legal
 
