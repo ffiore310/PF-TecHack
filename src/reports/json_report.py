@@ -32,4 +32,13 @@ class JsonReport(BaseReport):
             }
         }
         
+        # Adiciona análise avançada (FASE 1) se disponível
+        if hasattr(self, 'risk_summary') and self.risk_summary:
+            report_dict['risk_analysis'] = {
+                'risk_summary': self.risk_summary,
+                'heuristic_insights': getattr(self, 'heuristic_insights', {}),
+                'correlation_analysis': getattr(self, 'correlation_analysis', {}),
+                'remediation_plan': getattr(self, 'remediation_plan', {})
+            }
+        
         return json.dumps(report_dict, indent=2)

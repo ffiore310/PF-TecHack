@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Web Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header do Dashboard -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+            <p class="text-muted">Olá, {{ current_user.name }}! Bem-vindo ao seu painel de controle.</p>
+        </div>
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-file-earmark-check display-4 text-primary"></i>
+                    <h3 class="mt-2">{{ scan_count }}</h3>
+                    <p class="text-muted mb-0">Total de Scans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-bug display-4 text-danger"></i>
+                    <h3 class="mt-2">{{ total_vulnerabilities }}</h3>
+                    <p class="text-muted mb-0">Vulnerabilidades Encontradas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-exclamation-triangle display-4 text-warning"></i>
+                    <h3 class="mt-2">{{ critical_count }}</h3>
+                    <p class="text-muted mb-0">Críticas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-calendar-check display-4 text-success"></i>
+                    <h3 class="mt-2">{{ current_user.created_at.strftime('%d/%m/%Y') }}</h3>
+                    <p class="text-muted mb-0">Membro desde</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão Novo Scan -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <a href="{{ url_for('new_scan') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle"></i> Novo Scan
+            </a>
+        </div>
+    </div>
+
+    <!-- Histórico de Scans -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Scans</h5>
+                </div>
+                <div class="card-body">
+                    {% if scans %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>URL</th>
+                                        <th>Tipo</th>
+                                        <th>Vulnerabilidades</th>
+                                        <th>Risk Score</th>
+                                        <th>Nível de Risco</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for scan in scans %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ scan.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('scan_detail', scan_id=scan.id) }}">
+                                                {{ scan.url[:50] }}{% if scan.url|length > 50 %}...{% endif %}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ scan.scan_type.upper() }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if scan.status == 'completed' %}
+                                                <span class="badge bg-info">{{ scan.total_vulnerabilities }}</span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if scan.status == 'completed' %}
+                                                <strong>{{ "%.1f"|format(scan.risk_score) }}/10</strong>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if scan.status == 'completed' %}
+                                                {% if scan.risk_level == 'CRITICAL' %}
+                                                    <span class="badge bg-danger">CRÍTICO</span>
+                                                {% elif scan.risk_level == 'HIGH' %}
+                                                    <span class="badge bg-warning text-dark">ALTO</span>
+                                                {% elif scan.risk_level == 'MEDIUM' %}
+                                                    <span class="badge bg-info">MÉDIO</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">BAIXO</span>
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if scan.status == 'completed' %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Completo
+                                                </span>
+                                            {% elif scan.status == 'failed' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="bi bi-x-circle"></i> Falhou
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="bi bi-hourglass-split"></i> Pendente
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('scan_detail', scan_id=scan.id) }}" 
+                                                   class="btn btn-outline-primary" title="Ver Detalhes">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                {% if scan.status == 'completed' %}
+                                                    <a href="{{ url_for('download_scan_report', scan_id=scan.id, format='html') }}" 
+                                                       class="btn btn-outline-success" title="Baixar Relatório">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                {% endif %}
+                                                <a href="{{ url_for('delete_scan', scan_id=scan.id) }}" 
+                                                   class="btn btn-outline-danger" title="Excluir"
+                                                   onclick="return confirm('Tem certeza que deseja excluir este scan?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <h4 class="mt-3">Nenhum scan realizado ainda</h4>
+                            <p class="text-muted">Clique no botão "Novo Scan" para começar</p>
+                            <a href="{{ url_for('new_scan') }}" class="btn btn-primary mt-3">
+                                <i class="bi bi-plus-circle"></i> Fazer Primeiro Scan
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh da página se houver scans em andamento
+{% if has_running_scans %}
+    setTimeout(function() {
+        location.reload();
+    }, 5000);  // Recarrega a cada 5 segundos
+{% endif %}
+</script>
+{% endblock %}

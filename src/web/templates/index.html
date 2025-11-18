@@ -4,6 +4,47 @@
     <title>Web Security Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: transform 0.2s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .risk-badge {
+            font-size: 1.2rem;
+            padding: 0.5rem 1rem;
+        }
+        .vuln-card {
+            border-left: 4px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        .vuln-card.critical {
+            border-left-color: #dc3545;
+        }
+        .vuln-card.high {
+            border-left-color: #fd7e14;
+        }
+        .vuln-card.medium {
+            border-left-color: #ffc107;
+        }
+        .vuln-card.low {
+            border-left-color: #0dcaf0;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -70,6 +111,7 @@
                                     <div class="mb-3">
                                         <label for="reportFormat" class="form-label">Formato do Relatório</label>
                                         <select class="form-select" id="reportFormat">
+                                            <option value="html">HTML Interativo (Recomendado)</option>
                                             <option value="json">JSON</option>
                                             <option value="markdown">Markdown</option>
                                         </select>
@@ -110,34 +152,194 @@
                 </div>
             </div>
         </div>
+        
+        <!-- FASE 2: Dashboard Visual -->
+        <div id="dashboardSection" class="d-none mt-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3><i class="bi bi-speedometer2"></i> Dashboard de Análise</h3>
+                        <button id="downloadReportBtn" class="btn btn-success">
+                            <i class="bi bi-download"></i> Baixar Relatório Completo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Métricas Principais -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card dashboard-card text-center">
+                        <div class="card-body">
+                            <div class="metric-label">Total de Vulnerabilidades</div>
+                            <div class="metric-value text-primary" id="totalVulns">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card dashboard-card text-center">
+                        <div class="card-body">
+                            <div class="metric-label">Risk Score Médio</div>
+                            <div class="metric-value text-warning" id="avgScore">0.0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card dashboard-card text-center">
+                        <div class="card-body">
+                            <div class="metric-label">Nível de Risco</div>
+                            <div class="metric-value" id="riskLevel">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card dashboard-card text-center">
+                        <div class="card-body">
+                            <div class="metric-label">Tempo de Scan</div>
+                            <div class="metric-value text-info" id="scanTime">0s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráficos -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Distribuição por Severidade</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="severityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Vulnerabilidades por Tipo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="typeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Plano de Remediação -->
+            <div class="row mb-4" id="remediationSection">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Timeline de Remediação</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="timelineContent">
+                                <p class="text-muted">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Wins</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="quickWinsContent">
+                                <p class="text-muted">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Score por Vulnerabilidade -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Vulnerabilidades Priorizadas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="height: 400px;">
+                                <canvas id="riskScoreChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Attack Chains e Insights -->
+            <div class="row mb-4" id="attackChainsSection">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="bi bi-link-45deg"></i> Attack Chains Detectadas</h5>
+                        </div>
+                        <div class="card-body" id="attackChainsContent">
+                            <p class="text-muted">Nenhuma attack chain detectada.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista Detalhada de Vulnerabilidades -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Detalhes das Vulnerabilidades</h5>
+                        </div>
+                        <div class="card-body" id="vulnDetailsList">
+                            <p class="text-muted">Nenhuma vulnerabilidade encontrada.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
-        // Variáveis globais para armazenar o relatório
-        let currentReportBlob = null;
-        let currentReportFilename = '';
+        console.log('✅ JavaScript carregado!');
+        console.log('jQuery disponível:', typeof $ !== 'undefined');
         
-        // Atualiza checkboxes de tipo de scan
-        $('#scanAll').change(function() {
-            $('.scan-type').prop('checked', false).prop('disabled', $(this).is(':checked'));
-        });
-
-        $('.scan-type').change(function() {
-            if ($(this).is(':checked')) {
-                $('#scanAll').prop('checked', false);
-            }
-        });
-
-        // Form de scan individual
-        $('#scanForm').on('submit', async function(e) {
-            e.preventDefault();
+        // Variáveis globais
+        let currentScanId = null;
+        let currentReportFormat = 'html';
+        let charts = {};
+        
+        // Aguarda DOM carregar
+        $(document).ready(function() {
+            console.log('✅ DOM pronto!');
             
-            // Mostra status e esconde botão de download
+            // Atualiza checkboxes de tipo de scan
+            $('#scanAll').change(function() {
+                $('.scan-type').prop('checked', false).prop('disabled', $(this).is(':checked'));
+            });
+
+            $('.scan-type').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#scanAll').prop('checked', false);
+                }
+            });
+
+            // Form de scan individual
+            $('#scanForm').on('submit', async function(e) {
+                e.preventDefault();
+                console.log('📤 Formulário submetido!');
+            
+            // Esconde dashboard e mostra loading
+            $('#dashboardSection').addClass('d-none');
             $('#scanStatus').removeClass('d-none');
             $('#scanResults').html('<p class="text-muted"><em>Executando scan...</em></p>');
-            $('#downloadSection').addClass('d-none');
             
             // Prepara dados
             let types = $('#scanAll').is(':checked') ? 'all' : 
@@ -145,108 +347,50 @@
                            return $(this).val();
                        }).get().join(',');
             
-            const reportFormat = $('#reportFormat').val();
+            currentReportFormat = $('#reportFormat').val();
             
             // Cria form data
             let formData = new FormData();
             formData.append('url', $('#url').val());
             formData.append('type', types);
-            formData.append('format', reportFormat);
             
             try {
-                // Faz requisição usando fetch API
-                const response = await fetch('/scan', {
+                // Faz requisição para executar scan
+                const response = await fetch('/scan/execute', {
                     method: 'POST',
                     body: formData
                 });
                 
-                console.log('Response status:', response.status);
+                const result = await response.json();
                 
-                const contentType = response.headers.get('content-type');
-                console.log('Content-Type:', contentType);
-                
-                // Se for erro (JSON)
-                if (!response.ok) {
-                    const errorData = await response.json();
+                // Se for erro
+                if (!response.ok || result.status === 'error') {
                     $('#scanStatus').addClass('d-none');
                     $('#scanResults').html(`
                         <div class="alert alert-danger">
-                            <i class="bi bi-x-circle"></i> <strong>Erro:</strong> ${errorData.message}
+                            <i class="bi bi-x-circle"></i> <strong>Erro:</strong> ${result.message}
                         </div>
                     `);
                     return;
                 }
                 
-                // Se for sucesso, processa o conteúdo
-                const blob = await response.blob();
-                const disposition = response.headers.get('content-disposition');
-                let filename = 'scan_report.json';
+                // Sucesso - popula dashboard
+                currentScanId = result.scan_id;
+                populateDashboard(result.data);
                 
-                if (disposition && disposition.includes('filename=')) {
-                    filename = disposition.split('filename=')[1].replace(/['"]/g, '');
-                }
-                
-                console.log('Filename:', filename);
-                console.log('Blob size:', blob.size);
-                
-                // Armazena o blob para download posterior
-                currentReportBlob = blob;
-                currentReportFilename = filename;
-                
-                // Lê o conteúdo do blob para exibir
-                const text = await blob.text();
-                
-                // Função para escapar HTML
-                function escapeHtml(unsafe) {
-                    return unsafe
-                        .replace(/&/g, "&amp;")
-                        .replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;")
-                        .replace(/"/g, "&quot;")
-                        .replace(/'/g, "&#039;");
-                }
-                
-                // Formata e exibe o conteúdo baseado no formato
-                let displayContent = '';
-                if (reportFormat === 'json') {
-                    try {
-                        const jsonData = JSON.parse(text);
-                        const escapedJson = escapeHtml(JSON.stringify(jsonData, null, 2));
-                        displayContent = `
-                            <div class="alert alert-success mb-3">
-                                <i class="bi bi-check-circle"></i> <strong>Scan concluído com sucesso!</strong>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Resumo:</strong>
-                                <ul>
-                                    <li>URL: ${escapeHtml(jsonData.scan_info.target_url)}</li>
-                                    <li>Total de vulnerabilidades: ${jsonData.vulnerabilities.length}</li>
-                                    <li>Tempo de scan: ${jsonData.scan_info.scan_time.toFixed(2)}s</li>
-                                </ul>
-                            </div>
-                            <pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">${escapedJson}</pre>
-                        `;
-                    } catch (e) {
-                        const escapedText = escapeHtml(text);
-                        displayContent = `<pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto;">${escapedText}</pre>`;
-                    }
-                } else {
-                    // Markdown - escapa o HTML para evitar execução de scripts
-                    const escapedText = escapeHtml(text);
-                    displayContent = `
-                        <div class="alert alert-success mb-3">
-                            <i class="bi bi-check-circle"></i> <strong>Scan concluído com sucesso!</strong>
-                        </div>
-                        <pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap;">${escapedText}</pre>
-                    `;
-                }
-                
-                // Atualiza a interface
+                // Esconde loading e mostra dashboard
                 $('#scanStatus').addClass('d-none');
-                $('#scanResults').html(displayContent);
-                $('#downloadSection').removeClass('d-none');
+                $('#scanResults').html(`
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> <strong>Scan concluído!</strong> Visualize os resultados no dashboard abaixo.
+                    </div>
+                `);
+                $('#dashboardSection').removeClass('d-none');
                 
-                console.log('Conteúdo exibido com sucesso!');
+                // Scroll suave até o dashboard
+                $('html, body').animate({
+                    scrollTop: $('#dashboardSection').offset().top - 20
+                }, 500);
                 
             } catch (error) {
                 console.error('Erro durante o scan:', error);
@@ -257,26 +401,366 @@
                     </div>
                 `);
             }
+        }); // Fim do submit handler
+        
+        // Botão de download (seção antiga)
+        $('#downloadBtn').on('click', function() {
+            if (!currentScanId) {
+                alert('Nenhum scan disponível para download.');
+                return;
+            }
+            
+            // Abre URL de download
+            window.location.href = `/scan/download/${currentScanId}?format=${currentReportFormat}`;
         });
         
-        // Botão de download
-        $('#downloadBtn').on('click', function() {
-            if (currentReportBlob && currentReportFilename) {
-                const url = window.URL.createObjectURL(currentReportBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = currentReportFilename;
-                document.body.appendChild(link);
-                link.click();
-                
-                setTimeout(() => {
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(link);
-                }, 100);
-                
-                console.log('Download iniciado:', currentReportFilename);
+        // Botão de download do dashboard (FASE 2)
+        $('#downloadReportBtn').on('click', function() {
+            if (!currentScanId) {
+                alert('Nenhum scan disponível para download.');
+                return;
             }
+            
+            // Abre URL de download
+            window.location.href = `/scan/download/${currentScanId}?format=${currentReportFormat}`;
         });
+        
+        // Função para popular o dashboard
+        function populateDashboard(data) {
+            // Destrói gráficos anteriores
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+            
+            // Métricas principais
+            $('#totalVulns').text(data.total_vulns || 0);
+            $('#scanTime').text((data.scan_time || 0).toFixed(2) + 's');
+            
+            // Risk summary
+            const riskSummary = data.risk_summary || {};
+            $('#avgScore').text((riskSummary.average_score || 0).toFixed(1));
+            
+            const riskLevel = riskSummary.overall_risk_level || 'LOW';
+            const riskColors = {
+                'CRITICAL': 'text-danger',
+                'HIGH': 'text-warning',
+                'MEDIUM': 'text-info',
+                'LOW': 'text-success'
+            };
+            $('#riskLevel').text(riskLevel).attr('class', 'metric-value ' + (riskColors[riskLevel] || 'text-secondary'));
+            
+            // Gráfico de severidade (Pizza)
+            createSeverityChart(riskSummary.severity_distribution || {});
+            
+            // Gráfico de tipos (Barras)
+            createTypeChart(data.vulnerabilities || []);
+            
+            // Gráfico de risk scores (Barras horizontais)
+            createRiskScoreChart(data.vulnerabilities || []);
+            
+            // Timeline de remediação
+            populateTimeline(data.remediation_plan || {});
+            
+            // Quick wins
+            populateQuickWins(data.remediation_plan || {});
+            
+            // Attack chains
+            populateAttackChains(data.heuristic_insights || {});
+            
+            // Lista detalhada de vulnerabilidades
+            populateVulnList(data.vulnerabilities || []);
+        }
+        
+        // Cria gráfico de severidade
+        function createSeverityChart(severityDist) {
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            
+            const data = {
+                labels: Object.keys(severityDist),
+                datasets: [{
+                    data: Object.values(severityDist),
+                    backgroundColor: [
+                        '#dc3545', // Critical - vermelho
+                        '#fd7e14', // High - laranja
+                        '#ffc107', // Medium - amarelo
+                        '#0dcaf0', // Low - cyan
+                        '#6c757d'  // Info - cinza
+                    ]
+                }]
+            };
+            
+            charts.severity = new Chart(ctx, {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Cria gráfico de tipos
+        function createTypeChart(vulnerabilities) {
+            const ctx = document.getElementById('typeChart').getContext('2d');
+            
+            // Agrupa por tipo
+            const typeCounts = {};
+            vulnerabilities.forEach(v => {
+                const type = v.type || 'Unknown';
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+            
+            const data = {
+                labels: Object.keys(typeCounts),
+                datasets: [{
+                    label: 'Quantidade',
+                    data: Object.values(typeCounts),
+                    backgroundColor: '#0d6efd'
+                }]
+            };
+            
+            charts.type = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Cria gráfico de risk scores
+        function createRiskScoreChart(vulnerabilities) {
+            const ctx = document.getElementById('riskScoreChart').getContext('2d');
+            
+            // Ordena por risk score e pega top 10
+            const sorted = [...vulnerabilities]
+                .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))
+                .slice(0, 10);
+            
+            const labels = sorted.map((v, i) => `#${i+1} ${v.type}`);
+            const scores = sorted.map(v => v.risk_score || 0);
+            
+            // Cores baseadas no score
+            const colors = scores.map(score => {
+                if (score >= 9) return '#dc3545';
+                if (score >= 7) return '#fd7e14';
+                if (score >= 4) return '#ffc107';
+                return '#0dcaf0';
+            });
+            
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Risk Score',
+                    data: scores,
+                    backgroundColor: colors
+                }]
+            };
+            
+            charts.riskScore = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 10
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Popula timeline de remediação
+        function populateTimeline(plan) {
+            const timeline = plan.estimated_timeline || {};
+            let html = `
+                <p><strong>Tempo Total:</strong> ${timeline.total_hours || 0}h (${timeline.total_days || 0} dias)</p>
+                <p class="text-muted">${timeline.recommendation || 'N/A'}</p>
+                <hr>
+                <h6>Breakdown por Severidade:</h6>
+                <ul>
+            `;
+            
+            const breakdown = timeline.breakdown || {};
+            Object.entries(breakdown).forEach(([sev, time]) => {
+                html += `<li>${sev}: ${time}</li>`;
+            });
+            
+            html += '</ul>';
+            
+            const phases = plan.remediation_phases || [];
+            if (phases.length > 0) {
+                html += '<hr><h6>Fases:</h6><ul>';
+                phases.forEach(phase => {
+                    html += `<li><strong>Fase ${phase.phase}:</strong> ${phase.name} (${phase.timeframe})</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            $('#timelineContent').html(html);
+        }
+        
+        // Popula quick wins
+        function populateQuickWins(plan) {
+            const wins = plan.quick_wins || [];
+            
+            if (wins.length === 0) {
+                $('#quickWinsContent').html('<p class="text-muted">Nenhuma correção rápida identificada.</p>');
+                return;
+            }
+            
+            let html = '<ul class="list-group">';
+            wins.forEach((win, i) => {
+                html += `
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">${i+1}. ${win.vulnerability}</div>
+                                <small class="text-muted">${win.location}</small>
+                                <p class="mb-0 mt-1"><i class="bi bi-lightning-fill text-warning"></i> ${win.quick_fix}</p>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">${win.estimated_time}</span>
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            
+            $('#quickWinsContent').html(html);
+        }
+        
+        // Popula attack chains
+        function populateAttackChains(insights) {
+            const chains = insights.attack_chains || [];
+            
+            if (chains.length === 0) {
+                $('#attackChainsSection').addClass('d-none');
+                return;
+            }
+            
+            $('#attackChainsSection').removeClass('d-none');
+            
+            let html = '';
+            chains.forEach(chain => {
+                html += `
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> ${chain.chain_name}</h6>
+                        <p class="mb-1"><strong>Severidade:</strong> ${chain.severity}</p>
+                        <p class="mb-1"><strong>Componentes:</strong> ${chain.components.join(', ')}</p>
+                        <p class="mb-1"><strong>Vulnerabilidades Envolvidas:</strong> ${chain.vulnerabilities_involved}</p>
+                        <hr>
+                        <p class="mb-0">${chain.description}</p>
+                    </div>
+                `;
+            });
+            
+            $('#attackChainsContent').html(html);
+        }
+        
+        // Popula lista detalhada de vulnerabilidades
+        function populateVulnList(vulnerabilities) {
+            if (vulnerabilities.length === 0) {
+                $('#vulnDetailsList').html('<p class="text-muted">Nenhuma vulnerabilidade encontrada.</p>');
+                return;
+            }
+            
+            // Ordena por prioridade de remediação
+            const sorted = [...vulnerabilities].sort((a, b) => 
+                (a.remediation_priority || 999) - (b.remediation_priority || 999)
+            );
+            
+            let html = '';
+            sorted.forEach((vuln, i) => {
+                const severity = vuln.severity_level || vuln.severity || 'Medium';
+                const severityClass = severity.toLowerCase();
+                const riskScore = vuln.risk_score || 0;
+                const priority = vuln.remediation_priority || i+1;
+                
+                html += `
+                    <div class="card vuln-card ${severityClass} mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title">
+                                    <span class="badge bg-secondary">#${priority}</span>
+                                    ${vuln.type}
+                                </h5>
+                                <span class="badge bg-${getSeverityBadgeColor(severity)} fs-6">${severity} - ${riskScore.toFixed(1)}/10</span>
+                            </div>
+                            <p class="card-text"><strong>URL:</strong> <code>${vuln.url || 'N/A'}</code></p>
+                            <p class="card-text"><strong>Método:</strong> ${vuln.method || 'N/A'}</p>
+                            <p class="card-text">${vuln.description || 'N/A'}</p>
+                            
+                            ${vuln.metrics ? `
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Métricas:</strong> 
+                                        Base: ${vuln.metrics.base_score} | 
+                                        Impact: ${vuln.metrics.impact_score} | 
+                                        Exploitability: ${vuln.metrics.exploitability}x
+                                    </small>
+                                </div>
+                            ` : ''}
+                            
+                            ${vuln.recommendation ? `
+                                <div class="mt-2">
+                                    <strong>Recomendação:</strong>
+                                    <p class="mb-0">${vuln.recommendation}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            $('#vulnDetailsList').html(html);
+        }
+        
+        // Helper para cor do badge de severidade
+        function getSeverityBadgeColor(severity) {
+            const colors = {
+                'CRITICAL': 'danger',
+                'Critical': 'danger',
+                'HIGH': 'warning',
+                'High': 'warning',
+                'MEDIUM': 'info',
+                'Medium': 'info',
+                'LOW': 'secondary',
+                'Low': 'secondary'
+            };
+            return colors[severity] || 'secondary';
+        }
+
+    }); // Fim do $(document).ready
 
     </script>
 </body>

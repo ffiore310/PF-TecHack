@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Scan - Web Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Novo Scan de Segurança</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('new_scan') }}" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.url.label(class="form-label") }}
+                            {{ form.url(class="form-control form-control-lg" ~ (" is-invalid" if form.url.errors else ""),
+                                      placeholder="https://exemplo.com") }}
+                            {% if form.url.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.url.errors[0] }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> Digite a URL completa do site que deseja escanear
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.scan_type.label(class="form-label") }}
+                            {{ form.scan_type(class="form-select") }}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> Escolha quais tipos de vulnerabilidades procurar
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Dicas -->
+            <div class="card mt-3">
+                <div class="card-body bg-light">
+                    <h6 class="card-title"><i class="bi bi-lightbulb"></i> Dicas</h6>
+                    <ul class="mb-0 small">
+                        <li>Use o scan "Todos os Tipos" para uma análise completa</li>
+                        <li>Após o scan, você poderá baixar o relatório em HTML, JSON ou Markdown</li>
+                        <li>O scan pode levar alguns segundos dependendo do site</li>
+                        <li>Você pode fazer múltiplos scans da mesma URL ao longo do tempo</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

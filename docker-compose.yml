@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Aplicação Web Security Scanner
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-security-scanner
+    ports:
+      - "5001:5001"
+    volumes:
+      # Persiste o banco de dados SQLite
+      - scanner_data:/app/src/web
+      # Persiste logs
+      - scanner_logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - DATABASE_PATH=/app/src/web/scanner.db
+    restart: unless-stopped
+    networks:
+      - scanner_network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:5001')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL (opcional - descomente se quiser usar ao invés do SQLite)
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: scanner-postgres
+  #   environment:
+  #     - POSTGRES_USER=scanner
+  #     - POSTGRES_PASSWORD=scanner_password
+  #     - POSTGRES_DB=scanner_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - scanner_network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U scanner"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+networks:
+  scanner_network:
+    driver: bridge
+
+volumes:
+  scanner_data:
+    driver: local
+  scanner_logs:
+    driver: local
+  # postgres_data:
+  #   driver: local
